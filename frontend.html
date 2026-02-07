@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>DevOps Demo App</h1>
+  <p id="status"></p>
+
+  <script>
+    fetch("http://localhost:8000/health")
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("status").innerText =
+          "Backend status: " + data.status;
+      });
+  </script>
+</body>
+</html>
