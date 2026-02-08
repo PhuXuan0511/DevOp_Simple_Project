@@ -2,14 +2,18 @@
 <html>
 <body>
   <h1>DevOps Demo App</h1>
-  <p id="status"></p>
+  <p id="status">Loading...</p>
 
   <script>
-    fetch("http://localhost:8000/health")
+    fetch("/api/health")
       .then(res => res.json())
       .then(data => {
         document.getElementById("status").innerText =
           "Backend status: " + data.status;
+      })
+      .catch(() => {
+        document.getElementById("status").innerText =
+          "Backend unreachable";
       });
   </script>
 </body>

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: devop-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_VERSION=1.0.0
+    networks:
+      - devop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: devop-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - devop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  devop-network:
+    driver: bridge
