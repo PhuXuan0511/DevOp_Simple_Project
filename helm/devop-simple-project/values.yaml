@@ -1,0 +1,21 @@
+replicaCount: 2
+
+backend:
+  image: "docker.io/fusssspring/devop-simple-project-backend:latest"
+  port: 8000
+  resources: {}
+
+frontend:
+  image: "docker.io/fusssspring/devop-simple-project-frontend:latest"
+  port: 80
+  resources: {}
+
+prometheus:
+  enabled: true
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+
+namespace: default

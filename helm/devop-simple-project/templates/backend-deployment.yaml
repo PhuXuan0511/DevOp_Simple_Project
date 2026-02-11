@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.backend.port }}"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image }}"
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+          resources: {{ toYaml .Values.backend.resources | indent 10 }}

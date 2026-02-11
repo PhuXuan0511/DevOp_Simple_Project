@@ -1,0 +1,68 @@
+---
+- name: Production-grade build, push and deploy
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    registry: "docker.io"
+    registry_namespace: "fusssspring"
+    backend_name: "{{ lookup('env','APP_NAME') | default('devop-simple-project') }}-backend"
+    frontend_name: "{{ lookup('env','APP_NAME') | default('devop-simple-project') }}-frontend"
+    build_tag: "{{ lookup('env','BUILD_TAG') | default('latest') }}"
+    namespace: "default"
+    kubeconfig: "{{ lookup('env','KUBECONFIG') | default('') }}"
+    push_images: true
+  vars_prompt: []
+  tasks:
+    - name: Ensure required collections are available (advisory)
+      debug:
+        msg: "Install collections with: ansible-galaxy collection install -r {{ playbook_dir }}/requirements.yml"
+
+    - name: Login to container registry
+      community.docker.docker_login:
+        registry_url: "{{ registry }}"
+        username: "{{ lookup('env','REGISTRY_USER') | default(omit) }}"
+        password: "{{ lookup('env','REGISTRY_PASSWORD') | default(omit) }}"
+      when: registry is defined and (lookup('env','REGISTRY_USER') != '')
+
+    - name: Build and push backend image
+      community.docker.docker_image:
+        path: "{{ playbook_dir }}/../backend"
+        name: "{{ registry }}/{{ registry_namespace }}/{{ backend_name }}"
+        tag: "{{ build_tag }}"
+        push: "{{ push_images }}"
+      register: backend_build
+
+    - name: Build and push frontend image
+      community.docker.docker_image:
+        path: "{{ playbook_dir }}/../frontend"
+        name: "{{ registry }}/{{ registry_namespace }}/{{ frontend_name }}"
+        tag: "{{ build_tag }}"
+        push: "{{ push_images }}"
+      register: frontend_build
+
+    - name: Show built image names
+      debug:
+        msg:
+          - "backend: {{ registry }}/{{ registry_namespace }}/{{ backend_name }}:{{ build_tag }}"
+          - "frontend: {{ registry }}/{{ registry_namespace }}/{{ frontend_name }}:{{ build_tag }}"
+
+
+    - name: Deploy Helm chart (upgrade --install)
+      command: >
+        helm upgrade --install {{ lookup('env','APP_NAME') | default('devop-simple-project') }} {{ playbook_dir }}/../helm/devop-simple-project
+        --namespace {{ namespace }} --create-namespace
+        --set backend.image={{ registry }}/{{ registry_namespace }}/{{ backend_name }}:{{ build_tag }}
+        --set frontend.image={{ registry }}/{{ registry_namespace }}/{{ frontend_name }}:{{ build_tag }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig }}"
+      register: helm_result
+
+    - name: Show helm output
+      debug:
+        var: helm_result.stdout_lines
+
+
+    - name: Print deploy summary
+      debug:
+        msg: "Deployed images: {{ registry }}/{{ registry_namespace }}/{{ backend_name }}:{{ build_tag }}, {{ registry }}/{{ registry_namespace }}/{{ frontend_name }}:{{ build_tag }}"
